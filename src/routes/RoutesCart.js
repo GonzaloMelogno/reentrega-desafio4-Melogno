@@ -1,21 +1,21 @@
 const express = require('express');
 const CartManager = require('../CartManager.js');
 
-const router = express.Router();
+const RouterCart = express.Router();
 const cartManager = new CartManager();
 
-router.post('/', (req, res) => {
+RouterCart.post('/', (req, res) => {
   const newCart = cartManager.createCart();
   res.json({ message: 'Cart created successfully', cart: newCart });
 });
 
-router.get('/:cid', (req, res) => {
+RouterCart.get('/:cid', (req, res) => {
   const cartId = req.params.cid;
   const cartProducts = cartManager.getCartProducts(cartId);
   res.json({ products: cartProducts });
 });
 
-router.post('/:cid/product/:pid', (req, res) => {
+RouterCart.post('/:cid/product/:pid', (req, res) => {
   const cartId = req.params.cid;
   const productId = req.params.pid;
   const quantity = parseInt(req.body.quantity) || 1;
@@ -29,7 +29,7 @@ router.post('/:cid/product/:pid', (req, res) => {
   }
 });
 
-router.delete('/:cid/product/:pid', (req, res) => {
+RouterCart.delete('/:cid/product/:pid', (req, res) => {
   const cartId = req.params.cid;
   const productId = req.params.pid;
 
@@ -40,7 +40,7 @@ router.delete('/:cid/product/:pid', (req, res) => {
   } else {
     res.status(400).json({ error: result.error });
   }
-  router.delete('/:cid', (req, res) => {
+  RouterCart.delete('/:cid', (req, res) => {
     const cartId = req.params.cid;
   
     const result = cartManager.removeCartById(cartId);
@@ -56,4 +56,4 @@ router.delete('/:cid/product/:pid', (req, res) => {
 
 );
 
-module.exports = router;
+module.exports = RouterCart;

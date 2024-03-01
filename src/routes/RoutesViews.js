@@ -7,7 +7,7 @@ const productManager = new ProductManager('./src/productos.json');
 
 viewsRouter.get('/', async (req, res)=>{
     try {
-        let products = await productManager.loadProductsFromJSON();
+        let products = await productManager.getAll();
         res.render('home',{
             products: products
         });

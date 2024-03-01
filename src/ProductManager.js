@@ -1,104 +1,99 @@
 const fs = require('fs');
+const path = require('path');
 
 class ProductManager {
-  constructor() {
-    this.products = [];
-    this.nextId = 1;
-  }
-
-  static loadProductsFromJSON() {
-    try {
-      const rawData = fs.readFileSync('./productos.json');
-      const productsData = JSON.parse(rawData);
-
-      const productManager = new ProductManager();
-
-      productsData.forEach((product) => {
-        productManager.addProduct(product);
-      });
-
-      return productManager;
-    } catch (error) {
-      console.error('Error loading products from JSON:', error.message);
-      throw error;
-    }
-  }
-  
-  addProduct(productData) {
-    if (!this.validateProductData(productData)) {
-      console.error('Invalid product data. All fields are mandatory. Product data:', productData);
-      return;
+    constructor() {
+        this.path = path.join(__dirname, 'productos.json');
     }
 
-    productData.id = this.nextId++;
-    this.products.push(productData);
-    console.log('Product added successfully:', productData);
-    this.saveProductsToJSON();
-  }
+    async getAll() {
+        try {
+            if (fs.existsSync(this.path)) {
+                const productsString = await fs.promises.readFile(this.path, "utf-8");
+                return JSON.parse(productsString)
+            }
+            await fs.promises.writeFile(this.path, JSON.stringify([]));
+            return [];
+        } catch (err) {
+            if (err.code === 'ENOENT') {
+                console.log('File not found!');
+            } else {
+                throw err;
+            }
+        }
 
-  validateProductData(productData) {
-    const requiredFields = ['title', 'description', 'price', 'stock'];
-    const defaultValues = { status: true, thumbnails: [] };
-    const mergedData = { ...defaultValues, ...productData };
-    return requiredFields.every(field => mergedData[field]);
-  }
-
-  getProducts() {
-    console.log('Products:', this.products);
-  }
-
-  getProductById(id) {
-    const product = this.products.find(p => p.id === id);
-
-    if (!product) {
-      console.error('Product not found.');
     }
+    async create(product) {
+        try {
+            let products = await this.readDataFile()
+            let checkCode = products.some((pCode) => pCode.code === product.code);
+            if (checkCode) {
+                throw new Error('Already exists a product with that code');
+            }
+            if (!product.title || !product.description || !product.price || !product.thumbnail || !product.stock) {
+                throw new Error('Empty fields, please add all the statements');
+            }
+            let id = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+            products.push({ id, ...product, status: true});
+            const productsString = JSON.stringify(products, null, 2);
+            await fs.promises.writeFile(this.path, productsString);
+            console.log('Product added succesfully');
+        } catch (error) {
+            throw new Error(error.message)
+        }
+    }
+    async findOne(id) {
+        try {
+            let products = await this.readDataFile()
+            let checkId = products.find((pId) => pId.id === id);
+            if (!checkId) {
+                throw new Error("Invalid id, not found")
+            }
+            return checkId;
+        } catch (error) {
+            throw new Error(error.message)
+        }
+    }
+    async updateOne(id, product) {
+        try {
+            let products = await this.readDataFile()
+            if (!product.code || !product.title || !product.description || !product.price || !product.thumbnail || !product.stock || !product.category) {
+                throw new Error('Empty fields, please add all the statements');
+            }
+            let index = products.findIndex((pId) => pId.id === id);
+            if (index === -1) {
+                throw new Error('Not found')
+            } else {
+                delete product.id;
+                products.splice(index, 1, {
+                    id,
+                    ...product,
+                    status: true
+                });
 
-    return product;
-  }
-
-
-deleteProductById(id) {
-  const productIndex = this.products.findIndex(p => p.id === id);
-
-  if (productIndex === -1) {
-    console.error('Product not found.');
-    return;
-  }
-
-  const deletedProduct = this.products.splice(productIndex, 1)[0];
-
-  this.saveProductsToJSON();
-
-  console.log('Product deleted successfully:', deletedProduct);
+            }
+            const productsString = JSON.stringify(products);
+            await fs.promises.writeFile(this.path, productsString);
+            console.log(`The product with id: ${id} was updated succesfully!`);
+        } catch (error) {
+            throw new Error(error.message)
+        }
+    }
+    async deleteProduct(id) {
+        try {
+            let products = await this.readDataFile()
+            let index = products.findIndex((pId) => pId.id === id);
+            if (index === -1) {
+                throw new Error('Cannot delete. Not found')
+            } else {
+                products.splice(index, 1);
+            }
+            const productsString = JSON.stringify(products);
+            await fs.promises.writeFile(this.path, productsString);
+            console.log(`The product with id: ${id} was deleted succesfully!`);
+        } catch (error) {
+            throw new Error(error.message)
+        }
+    }
 }
-
-saveProductsToJSON() {
-  try {
-    const jsonData = JSON.stringify(this.products, null, 2);
-    fs.writeFileSync('./productos.json', jsonData);
-    console.log('Products saved to productos.json successfully.');
-  } catch (error) {
-    console.error('Error saving products to JSON:', error.message);
-  }
-}
-
-updateProductById (id, updatedData) {
-  const productIndex = this.products.findIndex(p => p.id === id);
-
-  if (productIndex === -1) {
-    console.error('Product not found.');
-    return;
-  }
-
-  this.products[productIndex] = { ...this.products[productIndex], ...updatedData, id };
-
-  this.saveProductsToJSON();
-
-  console.log('Product updated successfully:', this.products[productIndex]);
-}
-
-}
-
-
 module.exports = ProductManager;
